@@ -1,10 +1,79 @@
 import { ThemeProvider } from '@/components/theme-provider'
 import { Navbar } from '@/components/global/navbar'
 import { Button } from '@/components/ui/button'
-import { motion } from 'framer-motion'
-import { Footer } from './components/global/footer'
+import { Footer } from '@/components/global/footer'
+
+import React, { useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useTransition, animated } from '@react-spring/web'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from '@/components/ui/dialog'
+
+interface Test {
+    color: string
+    // Diğer test parametrelerini ekleyebilirsiniz (desen, süre, vb.)
+}
 
 function App() {
+    const [isTesting, setIsTesting] = useState(false) // Test durumunu izlemek için
+    const [currentTest, setCurrentTest] = useState<number>(0)
+    const componentRef = useRef<HTMLDivElement>(null)
+
+    const tests: Test[] = [
+        { color: 'red' },
+        { color: 'green' },
+        { color: 'blue' },
+    ]
+
+    const startTest = () => {
+        setIsTesting(true) // Test modunu aç
+        toggleFullscreen() // Tam ekrana geç
+    }
+
+    const nextTest = () => {
+        setCurrentTest((currentTest + 1) % tests.length)
+    }
+
+    const prevTest = () => {
+        setCurrentTest((currentTest - 1 + tests.length) % tests.length)
+    }
+
+    const toggleFullscreen = () => {
+        if (componentRef.current) {
+            if (!document.fullscreenElement) {
+                componentRef.current.requestFullscreen()
+            } else {
+                document.exitFullscreen()
+                setIsTesting(false) // Tam ekrandan çıkınca test modunu kapat
+            }
+        }
+    }
+    const [isOpen, setIsOpen] = useState(false)
+
+    const handleDialogChange = (isOpen: boolean) => setIsOpen(isOpen)
+
+    const transition = useTransition(isOpen, {
+        from: {
+            scale: 0,
+            opacity: 0,
+        },
+        enter: {
+            scale: 1,
+            opacity: 1,
+        },
+        leave: {
+            scale: 0,
+            opacity: 0,
+        },
+    })
+
     return (
         <>
             <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
@@ -51,12 +120,84 @@ function App() {
                                 </motion.span>{' '}
                                 on your screen.
                             </div>
-                            <Button
-                                className="relative z-10 mt-8 max-w-sm"
-                                variant="shimmer"
+                            <Dialog
+                                open={isOpen}
+                                onOpenChange={handleDialogChange}
                             >
-                                start test
-                            </Button>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        className="relative z-10 mt-8 max-w-sm"
+                                        variant="shimmer"
+                                        onClick={toggleFullscreen}
+                                    >
+                                        start test
+                                    </Button>
+                                </DialogTrigger>
+                                {transition((style, isOpen) => (
+                                    <>
+                                        {isOpen ? (
+                                            <div className="pointer-events-auto fixed inset-0 h-screen w-full bg-red-500"></div>
+                                        ) : null}
+                                        {isOpen ? (
+                                            <DialogContent className="flex h-screen w-screen">
+                                                <DialogHeader>
+                                                    <DialogTitle>
+                                                        Edit profile
+                                                    </DialogTitle>
+                                                    <DialogDescription>
+                                                        Make changes to your
+                                                        profile here. Click save
+                                                        when you're done.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                sa
+                                                <DialogFooter>
+                                                    <Button type="submit">
+                                                        Save changes
+                                                    </Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        ) : null}
+                                    </>
+                                ))}
+                            </Dialog>
+                            <div ref={componentRef}>
+                                {!isTesting && (
+                                    <button onClick={startTest}>
+                                        Testi Başlat
+                                    </button>
+                                )}
+                                <AnimatePresence>
+                                    {isTesting && ( // Test modunda ise göster
+                                        <motion.div
+                                            key={currentTest}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            style={{
+                                                position: 'fixed',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100vw',
+                                                height: '100vh',
+                                                backgroundColor:
+                                                    tests[currentTest].color,
+                                            }}
+                                            className=""
+                                        >
+                                            <button onClick={prevTest}>
+                                                Geri
+                                            </button>
+                                            <button onClick={nextTest}>
+                                                İleri
+                                            </button>
+                                            <button onClick={toggleFullscreen}>
+                                                Çıkış
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
                     <Footer />
